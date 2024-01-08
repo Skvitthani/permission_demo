@@ -1,11 +1,12 @@
 import {
   Text,
   View,
+  Alert,
   Linking,
   AppState,
+  Platform,
   StyleSheet,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
 import {
   isLocationEnabled,
@@ -17,23 +18,17 @@ import {PERMISSIONS, RESULTS, check, request} from 'react-native-permissions';
 import ReactNativeBiometrics, {BiometryTypes} from 'react-native-biometrics';
 
 const App = () => {
-  const [currentLongitude, setCurrentLongitude] = useState();
   const [currentLatitude, setCurrentLatitude] = useState();
+  const [currentLongitude, setCurrentLongitude] = useState();
 
   useEffect(() => {
     const subscription = AppState.addEventListener(
       'change',
       async nextAppState => {
         try {
-          console.log('addEventListener ----------', nextAppState);
           if (nextAppState === 'active') {
             if (Platform.OS == 'android') {
-              console.log('Active----------', nextAppState);
               const checkEnabled = await isLocationEnabled();
-              const permission = await check(
-                PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-              );
-              console.log('permission----------', permission);
               if (!checkEnabled) {
                 const enableResult = await promptForEnableLocationIfNeeded();
                 if (enableResult == 'enabled') {
@@ -43,7 +38,7 @@ const App = () => {
             }
           }
         } catch (error) {
-          console.log('error----------', error);
+          console.log('error on change App state----------', error);
         }
       },
     );
@@ -65,20 +60,17 @@ const App = () => {
     const rnBiometrics = new ReactNativeBiometrics({
       allowDeviceCredentials: true,
     });
-
     rnBiometrics.isSensorAvailable().then(resultObject => {
       const {available, biometryType} = resultObject;
       if (available && biometryType === BiometryTypes.Biometrics) {
-        console.log('Biometrics is supported');
         rnBiometrics
           .simplePrompt({promptMessage: 'Enter Password'})
           .then(resultObject => {
             const {success} = resultObject;
-
             if (success) {
-              console.log('successful biometrics provided');
+              Alert.alert('successful biometrics provided');
             } else {
-              console.log('user cancelled biometric prompt');
+              Alert.alert('user cancelled biometric prompt');
             }
           })
           .catch(() => {
@@ -98,7 +90,7 @@ const App = () => {
         biometrics();
       },
       async error => {
-        console.log(error.code, error.message);
+        console.log('error on getting location', error);
       },
       {
         enableHighAccuracy: false,
@@ -162,7 +154,9 @@ const App = () => {
       <Text style={{color: 'black'}}>
         Your Current Longitude :: {currentLongitude}
       </Text>
-      <TouchableOpacity style={styles.buttonStyle} onPress={() => {}}>
+      <TouchableOpacity
+        style={styles.buttonStyle}
+        onPress={requestLocationPermission}>
         <Text style={styles.textInput}>{'Log in'}</Text>
       </TouchableOpacity>
     </View>
@@ -174,16 +168,16 @@ export default App;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    alignItems: 'center',
     backgroundColor: 'white',
     justifyContent: 'center',
-    alignItems: 'center',
   },
   buttonStyle: {
     padding: 20,
+    marginTop: 20,
     borderRadius: 20,
     alignItems: 'center',
     marginHorizontal: 30,
-    marginTop: 20,
     backgroundColor: '#706233',
   },
   textInput: {
